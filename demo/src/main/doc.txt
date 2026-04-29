@@ -119,7 +119,7 @@ Trong mapstruct còn có annotation giúp mapping dễ dàng đó là: @Mapping(
 *hot take: @autowired không best pratical để inject bean -> dùng construct để inject và lombok có hỗ trợ
     -> @RequiredArgsConstructor -> tạo constructor cho các biến final -> tự inject dependency kết hợp @DefaultField(level là private, makeFine là true)
 
-buoi #5=> lombok vaf mapstruct, autowired -> RequiredArgsConstructors, các Annotation khi dùng mapstruct
+buoi #5=> lombok vaf mapstruct, autowired -> RequiredArgsConstructors, các Annotation khi dùng mapstruct, @RequiredArgsConstructor vaf  @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 -------------------------------------------------------------------------------------------------
 
 khi trả về dữ liệu cho client, phải mã hóa password tránh password bị hackler phát hiện
@@ -131,3 +131,13 @@ vấn đề: mã hóa theo 2 chiều: 1 key để mã hóa và key để xem -> 
         -> vẫn phổ biến bây giờ nhưng không bảo mật tuyệt đối về việc mã hóa dữ liệu
 
 bcrypt: tạo random salt -> mã hóa salt và password
+
+PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10); -> truyền tham số là độ phức tạp của mã hóa
+user.setPassword(passwordEncoder.encode(user.getPassword())); -> method encode mã hóa password
+
+Optional<User> findByUsername(String username); ??? optional la gì
+
+normally: chỉ truyền username và password 1 lần để mã hóa -> tạo token để lần khác sử dụng thay vì truyền username và password nhiều lần
+    -> bảo vệ mật khẩu user an toàn
+
+=> #buoi6: sử dụng builder cho trả về AuthResponse,
