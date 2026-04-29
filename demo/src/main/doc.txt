@@ -1,0 +1,133 @@
+repo:
+extends jpaRepo<..., ...>
+jpa sẽ làm gì
+
+multi-layer: +mỗi request đi qua 3 lớp: controller (qly mapping endpoint), service(logic), repo(ttac database(kh chỉ dbms, lưu trong file hoặc hệ thống khác)
+             +mỗi layer chỉ được gọi layer dưới nó
+
+service:
+mapping các data từ quest vào object sử dụng annotation là @RequestedBody
+
+
+jpa:
+hibernate:
+  ddl-auto: update
+show-sql: true
+-> thay vì viết scirpt database thì jpa cách này tự generate bảng vào database cho thuận lợi mục đích học
+
+
+@GetMapping("/{userId}")
+    User getUser(@PathVariable String userId) {
+
+    }
+->để map thông tin của một biến từ path dùng trong dấu {} và dùng annotation PathVariable để mapping biến trên path vào tham số ví dụ GetMapping("{/userId}") -> (@PathVariable String userId)
+
+
+@PutMapping và @RequestedBody: mapping dữ liệu trong request vào dto
+
+=> buoi #2: tao api crud, cau hinh connect dbms(Database Management System – tức là Hệ quản trị cơ sở dữ liệu), tao crud tuan theo layer architecture: 3 layer: controller - service - repo
+
+---------------------------------------------------------------------------------------------------
+
+- quản lý exception trong spring, có annotation @ControllerAdvice. dùng để define các loại exception (bắt buộc có trong mọi dự án)
+
+-ResponseEntity<String> là gì
+
+- taị sao hàm tìm userName lại làm bằng cách tạo hàm tìm bằng  id trong repo sau đó đổi tên thành UserName thì nó tự config để tìm theo username ?
+
+-lỗi từ người dùng là 4xx -> badRequest()
+
+-dùng validation spring cần add thêm dependency
+
+- 2026-04-25T10:19:55.719+07:00  WARN 12472 --- [nio-8080-exec-4] .w.s.m.s.DefaultHandlerExceptionResolver :
+Resolved [org.springframework.web.bind.MethodArgumentNotValidException:
+Validation failed for argument [0] in com.example.demo.entity.User com.example.demo.controller.UserController.createUser(com.example.demo.dto.request.UserCreationRequest):
+[Field error in object 'userCreationRequest' on field 'password': rejected value [1234]; codes [Size.userCreationRequest.password,Size.password,Size.java.lang.String,Size];
+arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [userCreationRequest.password,password]; arguments []; default message [password],2147483647,8];
+default message [password must be at least 8 characters]] ]
+    -> lỗi như này tức trong globalHandler phải thêm @ExceptionHandler(value = tên_loại_exception)
+
+- .getFieldError(): field do la gi? field luc user nhap vao la gi
+    -> vi du: .getFieldError().getDefaultMessage()
+
+-mot so annotation cho viec validation: email, notBlank, notNull,... hoac custome validation annotation
+
+=> buoi #3: cau hinh va handle cac exception va quan ly validation
+--------------------------------------------------------------------------------------------------------------------------
+exception handling nâng cao và normalize api response ( chuan hoa api response -> client hieu duoc return thanh cong hoac return loi :vd lỗi 404, 202, ...)
+https://docs.apilayer.com/currencylayer/docs/getting-started
+-> mọi api response cần co mot structor để chung một format => SINH RA ApiResponse
+
+code:1000-> success
+
+@JsonInclude(JsonInclude.Include.NON_NULL) -> khi parse object -> json: nếu null, sẽ không hiện trong json
+    -> giúp clean, tăng performance, giảm confused cho client, giống trong production thực tế
+
+
+để chuẩn hóa các api response -> tạo riêng Enum để xác định loại error cụ thể và AppException để define lại những error từ Enum
+
+để handle riêng exception mà mình không lường trc được -> tạo enum UNCATEGORIZED_ERROR và xử lý nó với exception.class để giúp xác định tường minh hơn
+
+đối với lỗi validation MethodArgumentNotValidException, khi xác định enum sẽ khác hơn
+    trong dto, bình thường @valid gồm 2 tham số(size, message) -> thay message ở đây thành chuỗi String của enum cần define(ví dụ ở đây là USERNAME_INVALID)
+    trong global, dùng ErrorCode.valueOf(enumKey) để biến từ chuỗi -> enum.
+    Còn lại y chang những handle exception khác với enum và exception
+*=> có rủi ro nếu trong tham số message của @Valid viết sai chính tả -> hệ thống k define được lỗi -> Solution: tạo một errorCode enum riêng để xử lý bug này giống với UNCATEGORIZED_ERROR
+
+ErrorCode errorCode = ErrorCode.KEY_VALID;
+
+
+        try {
+            errorCode = ErrorCode.valueOf(enumKey);
+        } catch (IllegalArgumentException e) {}
+
+=> * ở đây khi valueOf(enumKey) X -> lập tức throw -> nên errorCode vẫn sẽ không gán nên vẫn là có giá trị là ErrorCode.KEY_VALUE
+
+
+=> buoi #4 normalize các api response ( code, message, và result(kiểu dữ liệu trả về) thay vì chỉ trả về api response dữ dạng một object gồm chuỗi thuần -> thông qua một dto ApiResponse
+xử lý các error trong validation dưới dạng normalize api response, xử lý chung các error unexpected -> Tất cả đều thông qua Enum và một exception handle riêng cho các lỗi
+
+-----------------------------------------------------------------------------------------------
+
+lombok: getter và setter
+mapstruct: mapping các dto
+
+các getter và setter do lombok sẽ được define trong mục target
+
+Annotaton @Data cung cấp các annotation khác như Getter, Setter, RequiredArgsConstructor j đó, ToString, EqualsAndHashCode
+Annotation @Builder(dùng để tạo object theo Builder Pattern) cung cấp cách tạo object tường minh hơn vì gọi thuộc tính và bỏ giá trị vào tham số -> tên_class.Builder().tên_thuộc_tính(value)...
+    *-> dùng builder -> lỗi khi tạo object kh tham số
+
+AllArgsConstructor và NoArgsConstructor
+
+@fieldDefaults cung cấp access modifier mặc định trong class
+
+@Mapper(componentModel = "spring") giúp mapstruct biết generate mapper trong spring theo kiểu Dependency injection
+
+có 2 kiểu mapper: có kiểu dữ liệu và void:
+    User toUser(UserCreationRequest reuqest);
+    void updateUser(@MappingTarget User user, UserUpdateRequest request); @MappingTarget -> mapping request tới user
+
+
+dữ liệu khi trả về phải là dto thay vì là entity
+
+Trong mapstruct còn có annotation giúp mapping dễ dàng đó là: @Mapping(source="", target="") -> giúp cho đồng bộ kiểu dữ liệu
+    vd: source="firstName" target="lastName" -> firstname sẽ giống lastName
+    *ngoài ra thêm tham số trong mapping() là ignore -> không mapping thuộc tính define trong source=""
+
+
+*hot take: @autowired không best pratical để inject bean -> dùng construct để inject và lombok có hỗ trợ
+    -> @RequiredArgsConstructor -> tạo constructor cho các biến final -> tự inject dependency kết hợp @DefaultField(level là private, makeFine là true)
+
+buoi #5=> lombok vaf mapstruct, autowired -> RequiredArgsConstructors, các Annotation khi dùng mapstruct
+-------------------------------------------------------------------------------------------------
+
+khi trả về dữ liệu cho client, phải mã hóa password tránh password bị hackler phát hiện
+
+vấn đề: mã hóa theo 2 chiều: 1 key để mã hóa và key để xem -> hacker vẫn biết
+    ->solution: hash mật khẩu (md5 kém bải mật -> dùng "bcrypt")
+    Hash: key ở việc bảo mật là dùng phép toán modulo để kh truy vết ngược lại: a % b = c -> c không thể truy vết ngược lại a và b
+        -> drawback: có thể dùng rainbow hack
+        -> vẫn phổ biến bây giờ nhưng không bảo mật tuyệt đối về việc mã hóa dữ liệu
+
+bcrypt: tạo random salt -> mã hóa salt và password
