@@ -140,4 +140,63 @@ Optional<User> findByUsername(String username); ??? optional la gì
 normally: chỉ truyền username và password 1 lần để mã hóa -> tạo token để lần khác sử dụng thay vì truyền username và password nhiều lần
     -> bảo vệ mật khẩu user an toàn
 
-=> #buoi6: sử dụng builder cho trả về AuthResponse,
+=> #buoi6: sử dụng builder cho trả về AuthResponse, Bscrypt, cơ chế hash bằng modulo
+--------------------------------------------------------------------------------------------------------
+
+
+JWT, token
+
+token base authentication ra đời để hỗ trợ việc xác thực nhanh gọn bớt rườm rà
+
+JWT: header, payload, signature.
+    -> payload k nên chứa thông tin quá nhạy cảm, chỉ nên gồm như: obj, role, id, ...
+    signature là hash của header + payload + salt secret
+
+    salt: ký (sign) và xác minh (verify) token.
+        -> kết hợp với secret key để tạo ra signature bằng thuật toán như HMAC SHA256 (giúp token ko bị sửa, token đc tạo hợp lệ bởi server)
+        ->Khi client gửi JWT lên server: - Server sẽ dùng lại secret key đó, - Tự tính lại signature từ header + payload, - So sánh với signature trong token
+
+-để tạo, kí một token dùng thư viện nimbusd:
+
+JWSObject: gồm header, payloads
+
+header: chua thong tin thuat toan
+
+data trong body goi la claim (claim set) -> noi dung duoc goi di trong token: subject, userId, ... nhwng thong tin essential
+
+-> tao payload - > dùng JWTClaimsSet de tao data ben trong payload, sau do chuyen sang json va truyen vao param cua payload constructor
+
+-> claim subject:dai dien cho user dang dang nhap
+
+->issuer ddeer bt token duoc issue tu user nao ( thuong la ten domian, ...)
+
+=> từ header và payload -> tạo json web signature object để kí(sign) -> serialize
+
+
+-verify token:
+
+
+- có thể giả mạo token nếu có đc secret key -> giấy key trong file khác thay vì code thẳng
+
+@Value(${jwt.}) -> giúp đọc value từ file yaml
+
+tai sao viet: protected static final String SIGNER_KEY; -> protected String SIGNER_KEY
+
+
+
+=> buoi #7: tao token, ki token de xac thuc noi dung khong bi thay doi; token valid: nội dung không thay đổi và kh expired, verify token
+-------------------------------------------------------------------------------------------------
+
+
+spring security -> để validate token; là một hệ thống xây dựng dựa trên kiến trúc filter của một servlet
+
+thứ tự của từng filter rất quan trọng; đặc tính filter: có thể cho request deny hoặc accept tới filter khác hoặc trả về client
+
+servlet chỉ thấy 1 filter của spring security NHƯNG một filter security gồm nhiều filter
+
+trước khi client đến controller: hệ thống security như sau:
+    client <-> filter <-> FilterChainProxy <-> filter <-> servlet <-> controller, repo, service
+
+
+
+
