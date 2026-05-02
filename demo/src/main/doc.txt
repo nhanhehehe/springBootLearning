@@ -232,3 +232,53 @@ muốn đăng ký một auth provider manager để support jwt token
 token valid chưa đủ -> không phải cũng có quyền làm công việc abc -> authorization
 
 *khi update những dto mà có dùng mapstruct thì nên clean lifecycle trong maven
+
+admin chỉ được tạo một lần duy nhất khi install chương trình hoặc initial chương tình -> tạo một config
+    ApplicationRunner là một Bean, chỉ chạy khi init chương trình, trả về môn hàm lamda arg
+        -> dùng để truyền role Admin
+
+
+BScript sử dụng nhiều nơi nên tạo riêng config
+
+
+câu hỏi phụ: tại sao dùng builder, (Role.ADMIN.name());, tìm admin bằng userRepository.findByUsername("admin").isEmpty(), private String buildScope(User user) {
+                                                                                                                                  StringJoiner stringJoiner = new StringJoiner(" ");
+                                                                                                                                  if (CollectionUtils.isEmpty(user.getRoles())) {
+                                                                                                                                      user.getRoles().forEach(stringJoiner::add);
+                                                                                                                                  }
+                                                                                                                                  return stringJoiner.toString();
+                                                                                                                              }
+nhắc bài cũ: khi add @Bean method sẽ được đưa vào application context để lấy sử dụng, tại sao k sử dụng autowired mà dùng allArgsConstr, ...
+             @Slf4j // lombok dungf để log,
+
+spring security hỗ trợ Authorization bằng jwt token (chỉ cần config cho đúng)
+    khi authorize bằng authentication và authorize bằng token để spring security có thể handle token
+        -> role phải có trong token -> hiện tại token chưa có role -> cần thêm
+
+    oauth2 quy định token có claim scope that chứa list các role cách nhau bởi dấu cách
+        -> sau khi xác thực token -> hệ thống decode token chứa claim scope để lấy thông tin role và map role đó cho user
+
+        tạo hàm builScope để nối các roles theo dạng cách nhau bởi dấu " " vì roles trong user là một list
+            -> cần define về dạng cách nhau bởi dấu cách
+
+
+    Sau khi đã có claim scope về role, SS sẽ map scope vào authority của user khi đăng nhập thành công
+        -> để xác thực thì: trong securityConfig: set requestMatcher get method chỉ admin mởi truy cập được
+                    ^
+                    |
+                    v
+để get user được authen trong request -> sử dụng securityContextHolder
+    -> có thể lấy ra các authorities về role THAT param trong requestMatcher.hasAuthority(param) hoặc .hasRole("ADMIN") (Role.ADMIN.name())
+
+    => SCOPE_ADMIN chính là param trong hasAuthority của requestMatcher, và nó được lấy từ securityContextHolder
+        -> Spring security cung cấp customize, NGOÀI config về decoder RA CUNG CẤP thêm config converter(jwtAuthenticationConverter) nhưng cần overwrite bean lại: @Bean
+                                                                                                                                                                      JwtAuthenticationConverter jwtAuthenticationConverter() {
+                                                                                                                                                                          JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+                                                                                                                                                                          jwtGrantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+                                                                                                                                                                          JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+                                                                                                                                                                          jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
+                                                                                                                                                                          return jwtAuthenticationConverter;
+                                                                                                                                                                      }
+
+                                                                                                                                                                      -> sửa prefix thành Role thay vì SCOPE
+
