@@ -190,6 +190,8 @@ tai sao viet: protected static final String SIGNER_KEY; -> protected String SIGN
 
 spring security -> để validate token; là một hệ thống xây dựng dựa trên kiến trúc filter của một servlet
 
+spring security là một cấu trúc dùng để xác thực thông tin validate trước khi tới lớp controller
+
 thứ tự của từng filter rất quan trọng; đặc tính filter: có thể cho request deny hoặc accept tới filter khác hoặc trả về client
 
 servlet chỉ thấy 1 filter của spring security NHƯNG một filter security gồm nhiều filter
@@ -197,6 +199,36 @@ servlet chỉ thấy 1 filter của spring security NHƯNG một filter security
 trước khi client đến controller: hệ thống security như sau:
     client <-> filter <-> FilterChainProxy <-> filter <-> servlet <-> controller, repo, service
 
+aouth2 config security spring
 
+config security: define những endpoint nào cần bảo vệ và endpoint nào user có thể access (get, ...)
+    - public: ai cx có thể truy cập (ví dụ như register, login...) -> vì lúc này ng dùng ch có credential nên kh thể vào
+        -> class HttpSecurity cho phép làm điều đó through những method:
+            -> class HttpSecurity cung cap method authorizeHttpRequest, include lamda function
+               that include matchers function that include 2 param: + name of method, + name of endpoint
+               , permitAll -> anyRequest -> authenticated
+                    ->aim: cho phép public các endpoint
+            *hot take: chỉ public nhưng kh được truy cậo vì mặc định spring.csrf() (bao vệ endpoint khỏi attack cross high) -> chưa hiện nội dung
+                -> httpSecurity.csrf(AbstractHttpConfigurer::disable); //AbstractHttpConfigurer -> AbstractHttpConfigurer.disable()
 
+        -> cho phép authorization bear với token thông qua outh2ResourceServer
+        , chứa lamda oauth2.jwt, chứa jwtConfigurer.decoder() -> authenticate jwt mà không ngoài idb thứ 3 nào
+                *decoder là một interface nên phải implement lại
+                    -> sử dụng nimbus (dependency oauth2 chứa dependency nimbus -> xóa dependency nimbus
+                    -> implement: trả về nimbusjwtdecoder gồm 2 spec(withsecretkey và macalgorithm): +secret key và +algorithm
+                        + secretkey: tạo một biến chứa secret key và thuật toán hash
+                        + algo: chứa thuật toán
 
+flow:
+httpSecurity.oauth2ResourceServer(oauth2 ->
+                oauth2.jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder()))
+        );
+muốn đăng ký một auth provider manager để support jwt token
+
+=>#buoi8 sử dụng spring security để authencate với jwt; architect của spring security, ...
+
+----------------------------------------------------------------------------------------------
+
+token valid chưa đủ -> không phải cũng có quyền làm công việc abc -> authorization
+
+*khi update những dto mà có dùng mapstruct thì nên clean lifecycle trong maven
