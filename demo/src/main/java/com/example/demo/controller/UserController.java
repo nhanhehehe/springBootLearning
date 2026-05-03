@@ -8,6 +8,7 @@ import com.example.demo.entity.User;
 import com.example.demo.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +28,13 @@ public class UserController {
 
     @PostMapping
     ApiResponse<UserResponse> createUser(@RequestBody @Valid UserCreationRequest request) {
-        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(userService.createRequest(request));
-        return apiResponse;
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.createRequest(request))
+                .build();
     }
 
     @GetMapping
-    ApiResponse<List<User>> getUsers() {
+    ApiResponse<List<UserResponse>> getUsers() {
 
         // get thong tin dang nhap da duoc authenticate trong request
         var authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -42,27 +43,38 @@ public class UserController {
         authentication.getAuthorities()
                 .forEach(role -> log.info("roles: {}", role.getAuthority()));
 
-        ApiResponse<List<User>> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(userService.getUsers());
-        return apiResponse;
+        return ApiResponse.<List<UserResponse>>builder()
+                .result(userService.getUsers())
+                .build();
     }
 
     @GetMapping("/{userId}")
     ApiResponse<UserResponse> getUser(@PathVariable String userId) {
-        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(userService.getUser(userId));
-        return apiResponse;
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.getUser(userId))
+                .build();
+    }
+
+    @GetMapping("/myInfo")
+    ApiResponse<UserResponse> getMyInfo() {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.getMyInfo())
+                .build();
     }
 
     @PutMapping("/{userId}")
-    UserResponse updateUser(@PathVariable String userId, @RequestBody UserUpdateRequest request) {
-        return userService.updateUser(userId, request);
+    ApiResponse<UserResponse> updateUser(@PathVariable String userId, @RequestBody UserUpdateRequest request) {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.updateUser(userId, request))
+                .build();
     }
 
     @DeleteMapping("/{userId}")
-    String deleteUser(@PathVariable String userId) {
+    ApiResponse<String> deleteUser(@PathVariable String userId) {
         userService.deleteUser(userId);
-        return "User has been deleted";
+        return ApiResponse.<String>builder()
+                .result("User has been deleted")
+                .build();
     }
 
 }

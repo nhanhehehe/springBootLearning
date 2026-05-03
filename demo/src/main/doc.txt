@@ -229,6 +229,8 @@ muốn đăng ký một auth provider manager để support jwt token
 
 ----------------------------------------------------------------------------------------------
 
+userResponse k chứa mật khẩu
+
 token valid chưa đủ -> không phải cũng có quyền làm công việc abc -> authorization
 
 *khi update những dto mà có dùng mapstruct thì nên clean lifecycle trong maven
@@ -282,3 +284,46 @@ spring security hỗ trợ Authorization bằng jwt token (chỉ cần config ch
 
                                                                                                                                                                       -> sửa prefix thành Role thay vì SCOPE
 
+
+#buoi9: authorize role admin và user, contextHolder, jwtAuthenticationConverter, hasAuthority (chỉ ai cò quyền mới được) or hasRole, buildScope, .claim("scope", buildScope(user)),
+--------------------------------------------------------------------
+authorize với jwt, SecurityContextHolder, pre and post Authorize (phana quyền dựa trên method thay vì endpoint)
+
+preAuth: cung cấp 1 proxy mà trước khi đến method này kiểm tra bên trong param
+    -> preAuth thay thế cho requestMatcher().hasAuthority() or hasRole()
+
+postAuth: chạy method xong nếu condition đúng thì mới trả về thông tin -> ít ứng dụng ()
+    -> chỉ user lấy thông tin của chính mình: @PostAuthorize("returnObject.username == authentication.name")
+more: https://docs.spring.io/spring-security/reference/servlet/authorization/method-security.html
+
+
+method: lấy thông tin user đang đăng nhập là ai
+    khi thông tin request được xác thực thành công -> thông tin sẽ đc lưu trong SecurityContextHolder
+        -> có thể get để lấy thông tin
+
+
+=> #buoi 10
+----------------------------------------------------------------------------
+advanced handling exception và trả về response với http tùy biến
+    khi handling exception, một số http response khác nhau trong khi chúng ta mong muốn http tương ứng với các exception tương ứng
+
+
+HttpStatusCode (interface) -> mong muốn với mỗi errorCode: gồm code, message và http status
+
+INTERNAL_SERVER_ERROR (500): lỗi không xác định được
+badRequest() : lỗi liên quan đến input user
+NotFound(404) : theo convention thông thường, là kh tìm thấy
+unauthrized(401) : Không xác thực được thông tin đăng nhập credentials
+
+trong globalExceptionHandler chúng tra thường dùng .badRequest -> đổi lại get statusCode trong Class enum ErrorCode
+
+unauthenticated: 401
+unauthorized: 403
+
+define AccessDeniedException khi get users với role user -> lỗi 403
+
+lỗi 401 không thể xử lý ở global handle mà phải trong security config vì nó nằm ở trong các tầng filter
+    -> nằm ở trong .authenticationEntryPoint() -> phải implement lại
+        thường là sai token, token expired, ...
+
+chưa hiểu: JwtAuthenticationEntryPoint
