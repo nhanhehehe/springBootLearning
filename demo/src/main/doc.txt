@@ -322,7 +322,7 @@ unauthorized: 403
 
 define AccessDeniedException khi get users với role user -> lỗi 403
 
-lỗi 401 không thể xử lý ở global handle mà phải trong security config vì nó nằm ở trong các tầng filter
+lỗi 401 không thể xử lý ở global handle mà phải trong security config vì nó nằm ở trong các "tầng filter"
     -> nằm ở trong .authenticationEntryPoint() -> phải implement lại
         thường là sai token, token expired, ...
 
